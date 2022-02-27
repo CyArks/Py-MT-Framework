@@ -3,23 +3,25 @@ Music Tagger and MP3 Download Framework by ©Florian Manhartseder
 More functions and bug fixes coming soon. Stay tuned!
 """
 
-import googleapiclient.errors
 import pandas as pd
 import httplib2
-import os
 import sys
+import os
 
+import googleapiclient.errors
 from googleapiclient.discovery import build
+
+# pip install --upgrade oauth2client
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import run_flow
 
 # https://musicbrainz.org/doc/MusicBrainz_API
-MB_APIPW = "Your Musicbrainz API Password"
+MB_APIPassword = "Your Musicbrainz API Password"
 MB_APIUsername = "Your Musicbrainz API Username"
-MB_Email = "Your Musicbrainz API Email Adress"
-MB_AccessSecret = 'Your Musicbraninz API AccessSecret'
-MB_AcessKey = 'Your Musicbrainz API AccesKey'
+MB_Email = "Your Musicbrainz API Email Address"
+MB_AccessSecret = 'Your MusicBrainz API AccessSecret'
+MB_AccessKey = 'Your Musicbrainz API AccessKey'
 
 
 def get_authenticated_service(settings=None):
@@ -39,17 +41,41 @@ def get_authenticated_service(settings=None):
                  http=credentials.authorize(httplib2.Http()))
 
 
-class Search:
-    def __init__(self):
-        self.youtube = get_authenticated_service()
+class Sample:  # ToDo. Rework / complete Sample function and test it
+    def __init__(self, fileLoc):
+        self.fileLoc = fileLoc
+        self.file = open(self.fileLoc, "rb")
+        self.sample = self.file.read()
+        self.file.close()
 
-    def search(self, searchKey: str):  # search by Keyword
-        response = self.youtube.search().list(
+    def delFile(self):
+        os.remove(self.fileLoc)
+
+    def compareSample(self, sample2):
+        if sample2 == self.sample:
+            return True
+
+        else:
+            return False
+
+    def delAllDoubleOnPaths(self, paths):
+        # import sys
+        pass
+
+
+class Search:  # ToDo. Test search function
+    def __init__(self, searchKey):
+        self.youtube = get_authenticated_service()
+        self.searchKey = searchKey
+        self.response = self._search()
+
+    def _search(self):  # search by Keyword
+        self.response = self.youtube.search().list(
             part="snippet",
             maxResults=50,
-            q=searchKey
+            q=self.searchKey
         )
-        return response.execute()
+        return self.response.execute()
 
 
 class Video:
@@ -167,26 +193,26 @@ logObj = Logger()
 
 def _getMetadataFromMusicbrainz(self, settings=None):  # returns JSON Data
     try:
-        logObj.import_(f"{self.__class__}: Importing datetime, hashlib, json, base64, hmac and time.")
+        logObj.import_(f": Importing datetime, hashlib, json, base64, hmac and time.")
         import datetime
         import hashlib
         import json
         import base64
         import hmac
         import time
-        logObj.import_(f"{self.__class__}: Successfully imported datetime, hashlib, json, base64, hmac and time.")
+        logObj.import_(f": Successfully imported datetime, hashlib, json, base64, hmac and time.")
     except ImportError as e:
-        logObj.warning(f"{self.__class__}: Import error: {e}.")
+        logObj.warning(f": Import error: {e}.")
         raise ImportError
 
     if settings is None:
         settings = APISettings.MusicbrainzAPISettings()
 
-    logObj.info(f"{self.__class__}: Opening File for sampling.")
+    logObj.info(f": Opening File for sampling.")
     file = open(self.path, "rb")
     sample = file.read()
     file.close()
-    logObj.info(f"{self.__class__}: Sampling completed.")
+    logObj.info(f": Sampling completed.")
 
     timestamp = int(time.mktime(datetime.datetime.utcfromtimestamp(time.time()).timetuple()))
     query_data = sample[:5000000]  # make sure sample is not too big
@@ -228,9 +254,11 @@ class File:
     try:
         logObj.import_("<class 'Musictool.File'>: Importing mutagen, addict and mp3_tagger.")
         from mutagen import MutagenError
+        # pip install addict
         from addict import Dict
 
         # https://pypi.org/project/mp3-tagger/
+        # pip install mp3-tagger
         from mp3_tagger import MP3File
 
         logObj.import_("<class 'Musictool.File'>: Successfully imported mutagen, addict and mp3_tagger.")
@@ -251,21 +279,23 @@ class File:
         self.mp3 = self.MP3File(self.mp3_path)
         logObj.init("Successfully inited File class Object")
 
-    @staticmethod
-    def getMetadataFromMusicbrainz(settings):
+    def getMetadataFromMusicbrainz(self, settings: None or object):  # ToDo. Test function
+        if settings is None:
+            settings = APISettings.MusicbrainzAPISettings()
         return _getMetadataFromMusicbrainz(settings)
 
-    def setMetadataFromMusicbrainz(self, settings):
+    def setMetadataFromMusicbrainz(self, settings=None or object):  # ToDo. Test function
+
         logObj.info(f"{self.__class__}: Setting mp3 Metadata from Musicbrainz")
         self.title, self.album, self.artist, self.genres, self.yt_link = self.getMetadataFromMusicbrainz(settings)
         self.setTitle(self.title)
         self.setAlbum(self.album)
         self.setArtist(self.artist)
 
-    def getTitle(self):
+    def getTitle(self):  # ToDo. Test function
         return self.mp3.song
 
-    def setTitle(self, title):
+    def setTitle(self, title):  # ToDo. Test function
         try:
             del self.mp3.song
             self.mp3.song = title
@@ -276,10 +306,10 @@ class File:
             logObj.error(f"{self.__class__}: Title Tag error! {e}")
             print("Tag Error!")
 
-    def getAlbum(self):
+    def getAlbum(self):  # ToDo. Test function
         return self.mp3.album
 
-    def setAlbum(self, album_name):
+    def setAlbum(self, album_name):  # ToDo. Test function
         try:
             del self.mp3.album
             self.mp3.album = album_name
@@ -290,10 +320,10 @@ class File:
             print("Tag Error!")
             logObj.import_(f"{self.__class__}: Album Tag error! {e}")
 
-    def getArtist(self):
+    def getArtist(self):  # ToDo. Test function
         return self.mp3.artist
 
-    def setArtist(self, artist_name):
+    def setArtist(self, artist_name):  # ToDo. Test function
         try:
             del self.mp3.artist
             self.mp3.song = artist_name
@@ -305,8 +335,13 @@ class File:
             logObj.error(f"{self.__class__}: Artist Tag error! {e}")
 
     # coming soon
-    def setGenre(self, genre):
+    def setGenre(self, genre):  # ToDo. Code and Test function
         pass
+
+    def delFile(self):  # ToDo. Test delete function
+        logObj.info(f"{self.__class__}: Deleted File @{self.path}")
+        del self.path
+        return "Done"
 
 
 class _ExtractData:
@@ -368,7 +403,7 @@ class APISettings:
             super().__init__()
 
             self.host = 'identify-eu-west-1.acrcloud.com'
-            self.accessKey = MB_AcessKey
+            self.accessKey = MB_AccessKey
             self.accessSecret = MB_AccessSecret
             self.http_url_file = "/v1/identify"
             self.dataType = "audio"
@@ -376,7 +411,7 @@ class APISettings:
             self.userAgent = ("ID3 Tagger / Playlist downloader", "V1.3", MB_Email)
             self.http_method = "POST"
             self.musicbrainAccData = {'username': MB_APIUsername,
-                                      'password': MB_APIPW}
+                                      'password': MB_APIPassword}
 
         def setHTTPUrlFile(self, URLFile):
             logObj.settings(f"{self.__class__}: HTTP Request URL set to: " + URLFile + ".")
@@ -468,31 +503,35 @@ class Song(APISettings, _ExtractData, File):
     import musicbrainzngs
     import pytube
 
-    def __init__(self, url, pytubeSettingsObj=None):
+    def __init__(self, url, pytubeSettingsObj=None, musicbrainzSettingsObj=None):
         super().__init__()
         self.url = url
         self.file = None
+
         if pytubeSettingsObj is not None:
             self.pytubeSettingsObj = pytubeSettingsObj
         else:
             self.pytubeSettingsObj = APISettings.PyTubeSettings()
 
+        if musicbrainzSettingsObj is None:
+            self.musicbrainzSettings = APISettings.MusicbrainzAPISettings()
+        else:
+            self.musicbrainzSettings = musicbrainzSettingsObj
+
         self.yt = self.pytube.YouTube(self.url,
                                       use_oauth=self.pytubeSettingsObj.OAuth,
-                                      allow_oauth_cache=self.pytubeSettingsObj.allowOAuthCache
-                                      )
+                                      allow_oauth_cache=self.pytubeSettingsObj.allowOAuthCache)
         self.yt_metadata = self.yt.metadata
         self.thumbnail_path = self.os.getcwd() + "\\thumbnail.jpg"
 
-        self.musicbrainzSettings = APISettings.MusicbrainzAPISettings()
         self.musicbrainzngs.auth(u=self.musicbrainzSettings.musicbrainAccData["username"],
                                  p=self.musicbrainzSettings.musicbrainAccData["password"])
         self.musicbrainzngs.set_useragent(self.musicbrainzSettings.userAgent, version=1)  # version usually unfilled
 
-    def getMetadataFromMusicbrainz(self, settings):
+    def getMetadataFromMusicbrainz(self, settings: None or object):
         return _getMetadataFromMusicbrainz(settings)
 
-    def getMetadataFromYoutube(self):
+    def getMetadataFromYoutube(self):  # ToDo. Test function
         try:
             if len(self.yt_metadata.raw_metadata) > 0:
                 yt_title = self.yt_metadata[0]['Song']
@@ -507,7 +546,7 @@ class Song(APISettings, _ExtractData, File):
             self.file = File(path=self.mp3_path)
             return self.file
 
-    def setMetadataFromYoutube(self):
+    def setMetadataFromYoutube(self):  # ToDo. Test function
         yt_title, yt_artists, yt_album = self.getMetadataFromYoutube()
         self.setTitle(yt_title)
         self.setAlbum(yt_album)
@@ -516,7 +555,7 @@ class Song(APISettings, _ExtractData, File):
     def getTitle(self):
         return self.mp3.song
 
-    def setTitle(self, title):
+    def setTitle(self, title):  # ToDo. Test function
         try:
             del self.mp3.song
             self.mp3.song = title
@@ -524,10 +563,10 @@ class Song(APISettings, _ExtractData, File):
         except self.MutagenError:
             print("Tag Error!")
 
-    def getAlbum(self):
+    def getAlbum(self):  # ToDo. Test function
         return self.mp3.album
 
-    def setAlbum(self, album_name):
+    def setAlbum(self, album_name):  # ToDo. Test function
         try:
             del self.mp3.album
             self.mp3.album = album_name
@@ -535,7 +574,7 @@ class Song(APISettings, _ExtractData, File):
         except self.MutagenError:
             print("Tag Error!")
 
-    def setArtist(self, artist_name):
+    def setArtist(self, artist_name):  # ToDo. Test function
         try:
             del self.mp3.artist
             self.mp3.song = artist_name
@@ -543,7 +582,7 @@ class Song(APISettings, _ExtractData, File):
         except self.MutagenError:
             print("Tag Error!")
 
-    def getArtist(self):
+    def getArtist(self):  # ToDo. Test function
         return self.mp3.artist
 
     def DownloadSong(self, setMetadataFromYoutube=False, targetFolder=os.getcwd()):  # Returns download path
@@ -580,7 +619,7 @@ class Song(APISettings, _ExtractData, File):
         return self.mp3_path
 
 
-def _create_log(log_data, log_file_dir):
+def _create_log(log_data, log_file_dir):  # ToDo. Rework log function!
     logObj.import_("Importing datetime from date.")
     from datetime import date
     logObj.import_("Successfully imported datetime from date.")
@@ -591,7 +630,7 @@ def _create_log(log_data, log_file_dir):
         log.write(log_data['last_time_updated'] + " " + date.today().strftime("%d/%m/%Y") + "\n")
 
 
-def _check_for_existing_log(log_file_dir):
+def _check_for_existing_log(log_file_dir):  # ToDo. Rework log function!
     import os
 
     log_data = []
@@ -623,21 +662,23 @@ class Playlist:
         self.sleepTime = sleepTime
         self.youtube = get_authenticated_service()
 
-        self.playlistURL = playlistURL
-        self.yt = pytube.Playlist(self.playlistURL)
-
-        self.playlist_title = self.yt.title
-        self.playlistLinks = self.yt.video_urls
-        self.playlist_length = self.yt.length
+        if playlistURL[0:4] == "PLei":
+            self.playlistURL = "https://www.youtube.com/playlist?list=" + playlistURL
+        else:
+            self.playlistURL = playlistURL
 
         self.id = self.playlistURL.replace('https://www.youtube.com/playlist?list=', '')
+
+        self.yt = pytube.Playlist(self.playlistURL)
+        self.playlist_title = self.yt.title
+        self.playlist_length = self.yt.length
 
         if targetFolderAddress is not None:
             self.targetFolderAddress = targetFolderAddress
         else:
             self.targetFolderAddress = self.downloadDir + "\\" + self.playlist_title
 
-    def AddItem(self, videoID: str):
+    def AddItem(self, videoID: str):  # ToDo. Test function
         try:
             add_video_request = self.youtube.playlistItems().insert(
                 part="snippet",
@@ -666,13 +707,13 @@ class Playlist:
         return title
 
     # coming soon
-    def editName(self):
+    def editName(self):  # ToDo. Code Playlist name edit function
         pass
 
-    def delete(self):
+    def delete(self):  # ToDo. Test function
         self.youtube.playlists().delete().execute()
 
-    def getPlaylistVideos(self):
+    def getPlaylistVideos(self):  # ToDo. Test function
         try:
             maxResults = 50
             items = []
@@ -701,15 +742,21 @@ class Playlist:
             print(e)
             return
 
-    # coming soon
-    def getLength(self):
+    def getLength(self):  # ToDo. Code Playlist get length function
         pass
 
     # coming soon
-    def getStatus(self):  # public / private / link-shared
+    def getStatus(self):  # ToDo. Code Playlist get Status function
+        # public / private / link-shared
+        # status =
+        # return status
         pass
 
-    def create(self, title: str, status: str, description="", tags=None):
+    # coming soon
+    def setStatus(self):  # ToDo. Code Playlist set Status function
+        pass
+
+    def create(self, title: str, status: str, description="", tags=None):  # ToDo. Test function
         request = self.youtube.playlists().insert(
             part="snippet,status",
             body={
@@ -729,7 +776,7 @@ class Playlist:
         return request.execute()
         # self.id = createdID
 
-    def listItems(self):
+    def listItems(self):   # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -751,7 +798,7 @@ class Playlist:
             print(err)
             return
 
-    def listMine(self):
+    def listMine(self):   # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -770,12 +817,13 @@ class Playlist:
                 ).execute()
                 items.extend(response.get('items'))
                 nextPageToken = response.get('nextPageToken')
+
             return items
         except Exception as err:
             print(err)
             return
 
-    def listAllPlaylistsForChannel(self, channelID: str):
+    def listAllPlaylistsForChannel(self, channelID: str):   # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -800,7 +848,7 @@ class Playlist:
             print(err)
             return
 
-    def listMyLikes(self):
+    def listMyLikes(self):   # ToDo. Test function
         request = self.youtube.videos().list(
             part="snippet,contentDetails,statistics",
             myRating="like",
@@ -808,7 +856,7 @@ class Playlist:
         )
         return request.execute()
 
-    def listMyDislikes(self):
+    def listMyDislikes(self):   # ToDo. Test function
         request = self.youtube.videos().list(
             part="snippet,contentDetails,statistics",
             maxResults=300,
@@ -816,7 +864,7 @@ class Playlist:
         )
         return request.execute()
 
-    def createBackup(self, items: list, backupPath=None):
+    def createBackup(self, items: list, backupPath=None):   # ToDo. Test function and code import Backup function
         if backupPath is None:
             backupPath = f"{os.getcwd()}\\{self.getTitle()}_backup.xlsx"
         try:
@@ -847,14 +895,8 @@ class Playlist:
         return self.daemon
         # log("Daemon set to True")
 
-    def setPlaylistLinks(self, playlistLinks):
-        self.playlistLinks = playlistLinks
-
     def getPlURL(self):
         return self.playlistURL
-
-    def getPlaylistLinks(self):
-        return self.playlistLinks
 
     # Deprecated
     def __DownloadPlaylist(self):
@@ -890,17 +932,17 @@ class Playlist:
 
         self.__startThread()
 
-    def downloadPlaylist(self):
+    def downloadPlaylist(self):  # ToDo Debug function
         from datetime import datetime
         import threading
         import time
 
         i = 0
         threads = []
-        for url in self.playlistLinks:
+        for url in self.yt.video_urls:
             i += 1
             x = Song(url)
-            thread = threading.Thread(target=x.DownloadSong, args=url)
+            thread = threading.Thread(target=x.DownloadSong)
             threads.append(thread)
             try:
                 thread.start()
@@ -911,7 +953,7 @@ class Playlist:
 
                 # creating log
         log = {
-            'last_download_url': self.playlistLinks[-1],
+            'last_download_url': self.yt.video_urls[-1],
             'last_download_id': i + self.offset,
             'last_time_updated': datetime.now().strftime("%H:%M:%S")
         }
@@ -920,12 +962,13 @@ class Playlist:
         _create_log(log_data=log, log_file_dir=self.log_file_dir)
         print("Done.")
 
+    # Deprecated
     def __startThread(self):
         import threading
         import time
         i = 0
 
-        for url in self.playlistLinks:
+        for url in self.yt.video_urls:
             i += 1
             t = threading.Thread(target=Song(url=url).DownloadSong(targetFolder=self.targetFolderAddress))
             t.daemon = self.daemon
@@ -934,6 +977,11 @@ class Playlist:
             print(url)
             t.join()
             time.sleep(4)
+
+    def getSongObjects(self):  # Yields Song object for each song in Playlist  ToDo. Test function
+        for url in self.yt.video_urls:
+            SongObject = Song(url)
+            yield SongObject
 
 
 def EncodeMultipartFormData(fields, files):
