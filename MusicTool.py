@@ -1,7 +1,11 @@
 """
 Music Tagger and MP3 Download Framework by ©Florian Manhartseder
 More functions and bug fixes coming soon. Stay tuned!
+Visit my GitHub Profile: https://github.com/CyArks
+
+None commercial use only!
 """
+
 
 import pandas as pd
 import httplib2
@@ -11,17 +15,24 @@ import os
 import googleapiclient.errors
 from googleapiclient.discovery import build
 
-# pip install --upgrade oauth2client
+from AccessData import APILoginData
+
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import run_flow
 
+CHECK_DEPENDENCIES = True
+
+if CHECK_DEPENDENCIES:
+    import Dependencies  # All dependencies for this project
+
 # https://musicbrainz.org/doc/MusicBrainz_API
-MB_APIPassword = "Your Musicbrainz API Password"
-MB_APIUsername = "Your Musicbrainz API Username"
-MB_Email = "Your Musicbrainz API Email Address"
-MB_AccessSecret = 'Your MusicBrainz API AccessSecret'
-MB_AccessKey = 'Your Musicbrainz API AccessKey'
+# 28.02.2022: create access variables in Musicbrainz class and assign AccessData.py values
+MB_AccessSecret = APILoginData["AccessSecret"]
+MB_APIPassword = APILoginData["Password"]
+MB_APIUsername = APILoginData["Username"]
+MB_AccessKey = APILoginData["AccessKey"]
+MB_Email = APILoginData["Email"]
 
 
 def get_authenticated_service(settings=None):
@@ -42,25 +53,44 @@ def get_authenticated_service(settings=None):
 
 
 class Sample:  # ToDo. Rework / complete Sample function and test it
-    def __init__(self, fileLoc):
+    def __init__(self, fileLoc, paths=None):
+        self.paths = paths
         self.fileLoc = fileLoc
         self.file = open(self.fileLoc, "rb")
         self.sample = self.file.read()
         self.file.close()
 
-    def delFile(self):
+    def delFile(self):  # Removes obj file path
         os.remove(self.fileLoc)
 
-    def compareSample(self, sample2):
+    def compareSample(self, sample2):  # Returns True if Samples are equal ToDo. Test function
+        if sample2.__class_ is Sample:
+            sample2 = sample2.sample
+
         if sample2 == self.sample:
             return True
 
         else:
             return False
 
-    def delAllDoubleOnPaths(self, paths):
-        # import sys
-        pass
+    def delAllDoubleOnPaths(self):  # ToDo. test function
+        samples = []
+        pathsDict = []
+        i = 0
+        for path in self.paths:
+            sample = Sample(path)
+            pathsDict[i] = path
+            samples[i] = sample
+            i += 1
+
+        x = 0
+        y = 0
+        for sample1 in samples:
+            x += 1
+            for sample2 in samples:
+                y += 1
+                if sample2 == sample1 and x != y:
+                    print(f"Double @ {pathsDict[x]} and {pathsDict[x]}")
 
 
 class Search:  # ToDo. Test search function
@@ -99,7 +129,7 @@ class Video:
         pass
 
 
-class Logger:
+class Logger:  # ToDo. implement Logger to all classes
     from datetime import datetime
     date = datetime.now().strftime("%H:%M:%S").replace(":", ".")
 
@@ -513,7 +543,7 @@ class Song(APISettings, _ExtractData, File):
         else:
             self.pytubeSettingsObj = APISettings.PyTubeSettings()
 
-        if musicbrainzSettingsObj is None:
+        if musicbrainzSettingsObj is None:  # If no setting obj is passed then one is created by default constructor
             self.musicbrainzSettings = APISettings.MusicbrainzAPISettings()
         else:
             self.musicbrainzSettings = musicbrainzSettingsObj
@@ -678,7 +708,7 @@ class Playlist:
         else:
             self.targetFolderAddress = self.downloadDir + "\\" + self.playlist_title
 
-    def AddItem(self, videoID: str):  # ToDo. Test function
+    def AddItem(self, videoID: str, position=None):  # ToDo. Test function
         try:
             add_video_request = self.youtube.playlistItems().insert(
                 part="snippet",
@@ -688,8 +718,9 @@ class Playlist:
                         'resourceId': {
                             'kind': 'youtube#video',
                             'videoId': videoID
+                            # if position is not None:
+                            #    'position': 0  # ToDo. position of added song in a playlist
                         }
-                        # 'position': 0
                     }
                 }
             )
@@ -707,7 +738,7 @@ class Playlist:
         return title
 
     # coming soon
-    def editName(self):  # ToDo. Code Playlist name edit function
+    def editName(self, name):  # ToDo. Code Playlist name edit function
         pass
 
     def delete(self):  # ToDo. Test function
@@ -743,7 +774,8 @@ class Playlist:
             return
 
     def getLength(self):  # ToDo. Code Playlist get length function
-        pass
+        length = len(self.getPlaylistVideos())
+        return length
 
     # coming soon
     def getStatus(self):  # ToDo. Code Playlist get Status function
@@ -753,10 +785,10 @@ class Playlist:
         pass
 
     # coming soon
-    def setStatus(self):  # ToDo. Code Playlist set Status function
+    def setStatus(self, status):  # ToDo. Code Playlist set Status function
         pass
 
-    def create(self, title: str, status: str, description="", tags=None):  # ToDo. Test function
+    def createNewPlaylist(self, title: str, status: str, description="", tags=None):  # ToDo. Test function
         request = self.youtube.playlists().insert(
             part="snippet,status",
             body={
@@ -776,7 +808,7 @@ class Playlist:
         return request.execute()
         # self.id = createdID
 
-    def listItems(self):   # ToDo. Test function
+    def listItems(self):  # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -798,7 +830,7 @@ class Playlist:
             print(err)
             return
 
-    def listMine(self):   # ToDo. Test function
+    def listMine(self):  # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -823,7 +855,7 @@ class Playlist:
             print(err)
             return
 
-    def listAllPlaylistsForChannel(self, channelID: str):   # ToDo. Test function
+    def listAllPlaylistsForChannel(self, channelID: str):  # ToDo. Test function
         try:
             items = []
             response = self.youtube.playlists().list(
@@ -848,7 +880,7 @@ class Playlist:
             print(err)
             return
 
-    def listMyLikes(self):   # ToDo. Test function
+    def listMyLikes(self):  # ToDo. Test function
         request = self.youtube.videos().list(
             part="snippet,contentDetails,statistics",
             myRating="like",
@@ -856,7 +888,7 @@ class Playlist:
         )
         return request.execute()
 
-    def listMyDislikes(self):   # ToDo. Test function
+    def listMyDislikes(self):  # ToDo. Test function
         request = self.youtube.videos().list(
             part="snippet,contentDetails,statistics",
             maxResults=300,
@@ -864,7 +896,7 @@ class Playlist:
         )
         return request.execute()
 
-    def createBackup(self, items: list, backupPath=None):   # ToDo. Test function and code import Backup function
+    def createBackup(self, items: list, backupPath=None):  # ToDo. Test function and code import Backup function
         if backupPath is None:
             backupPath = f"{os.getcwd()}\\{self.getTitle()}_backup.xlsx"
         try:
@@ -983,8 +1015,14 @@ class Playlist:
             SongObject = Song(url)
             yield SongObject
 
+    def mergePlaylistIntoSeasonPly(self):  # ToDo. code function
+        pass
 
-def EncodeMultipartFormData(fields, files):
+    def getEstimatedTimeToDownload(self):  # ToDo. code function to estimate the time it takes to download Playlist
+        pass
+
+
+def EncodeMultipartFormData(fields, files):  # ToDo check function
     from time import time
     boundary = "*****2016.05.27.acrcloud.rec.copyright." + str(
         time()) + "*****"
